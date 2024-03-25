@@ -9,30 +9,30 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-type Group struct {
+type Group[T any] struct {
 	timeout time.Duration
 	pool    *redis.Pool
 }
 
-func NewGroup(pool *redis.Pool, timeout time.Duration) *Group {
+func NewGroup[T any](pool *redis.Pool, timeout time.Duration) *Group[T] {
 	if timeout == 0 {
 		timeout = time.Second * 20
 	}
-	return &Group{pool: pool, timeout: timeout}
+	return &Group[T]{pool: pool, timeout: timeout}
 }
 
-type result struct {
-	Value     interface{}
+type result[T any] struct {
+	Value     T
 	ErrString string
 }
 
-func (g *Group) invokeWithRedis(fn func(conn redis.Conn) error) error {
+func (g *Group[T]) invokeWithRedis(fn func(conn redis.Conn) error) error {
 	conn := g.pool.Get()
 	defer conn.Close()
 	return fn(conn)
 }
 
-func (g *Group) lock(key string, ex time.Duration) bool {
+func (g *Group[T]) lock(key string, ex time.Duration) bool {
 	var ok bool
 	_ = g.invokeWithRedis(func(conn redis.Conn) error {
 		reply, err := redis.String(conn.Do("SET", key, "1", "EX", int64(ex.Seconds()), "NX"))
@@ -48,7 +48,7 @@ func (g *Group) lock(key string, ex time.Duration) bool {
 	return ok
 }
 
-func (g *Group) unlock(key string) {
+func (g *Group[T]) unlock(key string) {
 	_ = g.invokeWithRedis(func(conn redis.Conn) error {
 		ok, _ := redis.Bool(conn.Do("EXISTS", key))
 		if ok {
@@ -58,8 +58,8 @@ func (g *Group) unlock(key string) {
 	})
 }
 
-func (g *Group) publish(channel string, value interface{}, err error) error {
-	r := result{
+func (g *Group[T]) publish(channel string, value T, err error) error {
+	r := result[T]{
 		Value: value,
 	}
 	if err != nil {
@@ -72,7 +72,7 @@ func (g *Group) publish(channel string, value interface{}, err error) error {
 	})
 }
 
-func (g *Group) subscribe(channel string) (value interface{}, err error) {
+func (g *Group[T]) subscribe(channel string) (value T, err error) {
 	err = g.invokeWithRedis(func(conn redis.Conn) error {
 		ps := redis.PubSubConn{Conn: conn}
 		ps.Subscribe(redis.Args{}.AddFlat(channel)...)
@@ -84,7 +84,7 @@ func (g *Group) subscribe(channel string) (value interface{}, err error) {
 			case redis.Subscription:
 				continue
 			case redis.Message:
-				var r result
+				var r result[T]
 				err = json.Unmarshal(n.Data, &r)
 				if err != nil {
 					return err

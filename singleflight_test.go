@@ -44,9 +44,9 @@ func TestDo(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
 
-	g := rediflight.NewGroup(pool, time.Second*20)
+	g := rediflight.NewGroup[string](pool, time.Second*20)
 	expected := "bar"
-	v, err, _ := g.Do(t.Name(), func() (interface{}, error) {
+	v, err, _ := g.Do(t.Name(), func() (string, error) {
 		return expected, nil
 	})
 	assert.Nil(err)
@@ -57,25 +57,25 @@ func TestDoErr(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
 
-	g := rediflight.NewGroup(pool, time.Second*20)
+	g := rediflight.NewGroup[string](pool, time.Second*20)
 	someErr := errors.New("Some error")
-	v, err, _ := g.Do(t.Name(), func() (interface{}, error) {
-		return nil, someErr
+	v, err, _ := g.Do(t.Name(), func() (string, error) {
+		return "", someErr
 	})
 	assert.NotNil(err)
-	assert.Nil(v)
+	assert.Empty(v)
 }
 
 func TestDoDupSuppress(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
 
-	g := rediflight.NewGroup(pool, time.Second*20)
+	g := rediflight.NewGroup[string](pool, time.Second*20)
 
 	var wg1, wg2 sync.WaitGroup
 	c := make(chan string, 1)
 	var calls int32
-	fn := func() (interface{}, error) {
+	fn := func() (string, error) {
 		if atomic.AddInt32(&calls, 1) == 1 {
 			// First invocation.
 			wg1.Done()
@@ -98,7 +98,7 @@ func TestDoDupSuppress(t *testing.T) {
 			wg1.Done()
 			v, err, _ := g.Do(t.Name(), fn)
 			assert.Nil(err)
-			assert.Equal("bar", v.(string))
+			assert.Equal("bar", v)
 		}()
 	}
 	wg1.Wait()

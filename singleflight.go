@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (g *Group) Do(key string, fn func() (interface{}, error)) (v interface{}, err error, shared bool) {
+func (g *Group[T]) Do(key string, fn func() (T, error)) (v T, err error, shared bool) {
 	timeout := g.timeout
 	lockKey := fmt.Sprintf("singleflight_lock_%s", key)
 	channel := fmt.Sprintf("singleflight_result_%s", key)
