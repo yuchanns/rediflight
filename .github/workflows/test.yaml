@@ -1,0 +1,16 @@
+name: test
+on:
+  push:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: golang:latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v4
+        with:
+          cache-dependency-path: go.sum
+      - name: Install dependencies
+        run: go get .
+      - name: Test with the Go CLI
+        run: go test
