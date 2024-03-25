@@ -46,7 +46,7 @@ func TestDo(t *testing.T) {
 
 	g := rediflight.NewGroup(pool, time.Second*20)
 	expected := "bar"
-	v, err, _ := g.Do("key", func() (interface{}, error) {
+	v, err, _ := g.Do(t.Name(), func() (interface{}, error) {
 		return expected, nil
 	})
 	assert.Nil(err)
@@ -59,7 +59,7 @@ func TestDoErr(t *testing.T) {
 
 	g := rediflight.NewGroup(pool, time.Second*20)
 	someErr := errors.New("Some error")
-	v, err, _ := g.Do("key", func() (interface{}, error) {
+	v, err, _ := g.Do(t.Name(), func() (interface{}, error) {
 		return nil, someErr
 	})
 	assert.NotNil(err)
@@ -96,7 +96,7 @@ func TestDoDupSuppress(t *testing.T) {
 		go func() {
 			defer wg2.Done()
 			wg1.Done()
-			v, err, _ := g.Do("key", fn)
+			v, err, _ := g.Do(t.Name(), fn)
 			assert.Nil(err)
 			assert.Equal("bar", v.(string))
 		}()
