@@ -58,6 +58,21 @@ func (g *Group[T]) unlock(key string) {
 	})
 }
 
+func (g *Group[T]) numsub(channel string) (num int64, err error) {
+	err = g.invokeWithRedis(func(conn redis.Conn) error {
+		reply, err := redis.Values(conn.Do("PUBSUB", "NUMSUB", channel))
+		if err != nil {
+			return err
+		}
+		if len(reply) < 2 {
+			return nil
+		}
+		num = reply[1].(int64)
+		return nil
+	})
+	return
+}
+
 func (g *Group[T]) publish(channel string, value T, err error) error {
 	r := result[T]{
 		Value: value,

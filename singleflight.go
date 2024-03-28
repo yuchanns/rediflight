@@ -18,6 +18,9 @@ func (g *Group[T]) Do(key string, fn func() (T, error)) (v T, err error, shared 
 	defer g.unlock(lockKey)
 	// Execute the function and publish the outcome if successful.
 	v, err = fn()
-	_ = g.publish(channel, v, err)
+	num, _ := g.numsub(channel)
+	if num > 0 {
+		_ = g.publish(channel, v, err)
+	}
 	return
 }
