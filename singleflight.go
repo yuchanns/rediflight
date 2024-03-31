@@ -5,12 +5,11 @@ import (
 )
 
 func (g *Group[T]) Do(key string, fn func() (T, error)) (v T, err error, shared bool) {
-	timeout := g.timeout
-	lockKey := fmt.Sprintf("singleflight_lock_%s", key)
-	channel := fmt.Sprintf("singleflight_result_%s", key)
+	lockKey := fmt.Sprintf("sf:lock:%s", key)
+	channel := fmt.Sprintf("sf:chan:%s", key)
 	// Attempt to acquire the lock.
 	// If unsuccessful, subscribe and wait for the outcome.
-	if !g.lock(lockKey, timeout) {
+	if !g.lock(lockKey) {
 		shared = true
 		v, err = g.subscribe(channel)
 		return

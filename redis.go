@@ -15,6 +15,7 @@ type Group[T any] struct {
 }
 
 func NewGroup[T any](pool *redis.Pool, timeout time.Duration) *Group[T] {
+	// TODO: use the adapter for various of client implementations.
 	if timeout == 0 {
 		timeout = time.Second * 20
 	}
@@ -32,10 +33,12 @@ func (g *Group[T]) invokeWithRedis(fn func(conn redis.Conn) error) error {
 	return fn(conn)
 }
 
-func (g *Group[T]) lock(key string, ex time.Duration) bool {
+func (g *Group[T]) lock(key string) bool {
 	var ok bool
 	_ = g.invokeWithRedis(func(conn redis.Conn) error {
-		reply, err := redis.String(conn.Do("SET", key, "1", "EX", int64(ex.Seconds()), "NX"))
+		reply, err := redis.String(
+			conn.Do("SET", key, "1", "EX", int64(g.timeout.Seconds()), "NX"),
+		)
 		if err != nil {
 			return err
 		}
