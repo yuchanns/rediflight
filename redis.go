@@ -27,6 +27,12 @@ type result[T any] struct {
 	ErrString string
 }
 
+type Result[T any] struct {
+	Val  T
+	Err    error
+	Shared bool
+}
+
 func (g *Group[T]) invokeWithRedis(fn func(conn redis.Conn) error) error {
 	conn := g.pool.Get()
 	defer conn.Close()
